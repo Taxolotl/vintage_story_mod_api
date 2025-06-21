@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 license = "MIT"
 description = "Rust library for interacting with Vintage Story Web Mod API"
-repository = "https://github.com/taxolotl/vintage_story_mod_api"
+repository = "https://github.com/Taxolotl/vintage_story_mod_api"
 keywords = ["vintagestory", "api", "modding", "client"]
 
 [dependencies]
