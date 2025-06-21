@@ -1,0 +1,10 @@
+# Force LF endings for all text files (Rust source, TOML, Markdown, etc.)
+* text=auto eol=lf
+
+# Explicitly set some common types
+*.rs text eol=lf
+*.toml text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+.gitignore text eol=lf
