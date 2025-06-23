@@ -1,12 +1,12 @@
 //! API client implementation for the VintageStory Web Mod API.
-
+use std::fmt::{Display, Formatter};
 use crate::{error::ApiError, models::*};
 use reqwest::Client;
 use std::sync::Mutex;
 
 /// The core API client for interacting with the VintageStory mod database.
 #[derive(Debug)]
-pub struct VintageStoryApi {
+pub struct VintageStoryModApi {
     client: Client,
     enable_cache: bool,
 
@@ -14,12 +14,12 @@ pub struct VintageStoryApi {
     authors_cache: Mutex<Option<Vec<Author>>>,
 }
 
-impl VintageStoryApi {
+impl VintageStoryModApi {
     const BASE_URL: &'static str = "https://mods.vintagestory.at/api";
 
     /// Create a new API client instance.
     ///
-    /// If `enable_cache` is true, results from `/mods` and `/authors` will be cached in memory.
+    /// If `enable_cache` is true, results from `/mods` and `/authors` will be cached in memory. Recommended if you will be making several calls with the same client
     pub fn new(enable_cache: bool) -> Self {
         Self {
             client: Client::new(),
@@ -59,7 +59,12 @@ impl VintageStoryApi {
 
     /// Get detailed mod information for a specific mod ID.
     pub async fn get_mod(&self, mod_id: u32) -> Result<DetailedMod, ApiError> {
-        let url = format!("{}/mod/{}", Self::BASE_URL, mod_id);
+        self.get_mod_from_alias(mod_id.to_string()).await
+    }
+
+    /// Get detailed mod information from a mod alias
+    pub async fn get_mod_from_alias(&self, alias: impl AsRef<str>) -> Result<DetailedMod, ApiError> {
+        let url = format!("{}/mod/{}", Self::BASE_URL, alias.as_ref());
         let resp = self.client.get(url).send().await?;
         let mod_response: ModResponse = resp.json().await?;
         Ok(mod_response.mod_info)
@@ -69,6 +74,32 @@ impl VintageStoryApi {
     pub async fn get_detailed_mod_from_simple(&self, simple: SimpleMod) -> Result<DetailedMod, ApiError> {
         self.get_mod(simple.mod_id).await
     }
+
+    /// Search for mods using the site. Set ascending to true to search in ascending order, and set sort_by to None to search in recently updated
+    pub async fn search_mods(&self, query: impl AsRef<str>, ascending: bool, sort_by: impl Into<Option<SortBy>>) -> Result<Vec<SimpleMod>, ApiError> {
+        let sort_by = sort_by.into().unwrap_or_default();
+
+        let url = format!("{}/mods?text={}&sortby={}&sortdir={}&side=&userid=0&mv=", Self::BASE_URL, query.as_ref(), sort_by, if ascending { "a" } else { "d" });
+        let resp = self.client.get(url).send().await?;
+
+        let mods: ModsResponse = resp.json().await?;
+        Ok(mods.mods)
+    }
+
+    /// Search mods by name
+    pub async fn search_name(&self, query: impl AsRef<str>) -> Result<Vec<SimpleMod>, ApiError> {
+        let mods = self.get_mods().await?;
+
+        Ok(mods.into_iter().filter(|m| m.name.replace(|c| char::is_ascii_whitespace(&c) || char::is_ascii_punctuation(&c), "").eq_ignore_ascii_case(&query.as_ref().replace(|c| char::is_ascii_whitespace(&c) || char::is_ascii_punctuation(&c), ""))).collect())
+    }
+
+    /// Search mods by mod id
+    pub async fn search_mod_id(&self, query: impl AsRef<str>) -> Result<Vec<SimpleMod>, ApiError> {
+        let mods = self.get_mods().await?;
+
+        Ok(mods.into_iter().filter(|m| m.mod_id_strs.contains(&query.as_ref().replace(|c| char::is_ascii_whitespace(&c) || char::is_ascii_punctuation(&c), "").to_ascii_lowercase())).collect())
+    }
+
 
     /// Get all tags (always live from API, no caching).
     pub async fn get_tags(&self) -> Result<Vec<Tag>, ApiError> {
@@ -139,6 +170,41 @@ impl VintageStoryApi {
         self.clear_mods_cache();
         self.clear_authors_cache();
     }
+
+    pub async fn get_most_recent_file(&self, mod_id: u32) -> Result<String, ApiError> {
+        self.get_most_recent_file_from_alias(mod_id.to_string()).await
+    }
+
+    pub async fn get_most_recent_file_from_alias(&self, alias: impl AsRef<str>) -> Result<String, ApiError> {
+        let mut mod_info = self.get_mod_from_alias(alias).await?;
+        mod_info.releases.sort_by_key(|release| release.created.clone());
+
+        Ok(mod_info.releases.first().unwrap().to_owned().main_file)
+    }
+}
+
+#[derive(Default, Debug, Copy, Clone, PartialOrd, PartialEq, Ord, Eq)]
+pub enum SortBy {
+    Trending,
+    Downloads,
+    Comments,
+    Name,
+    #[default]
+    Released,
+    Created,
+}
+
+impl Display for SortBy {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", match self {
+            SortBy::Trending => "trendingpoints",
+            SortBy::Downloads =>     "downloads",
+            SortBy::Comments => "comments",
+            SortBy::Name =>     "name",
+            SortBy::Released => "lastreleased",
+            SortBy::Created =>     "created",
+        })
+    }
 }
 
 // Optional feature: random selection functions using `rand`
@@ -148,7 +214,7 @@ mod random_api {
     use super::*;
     use rand::rng;
 
-    impl VintageStoryApi {
+    impl VintageStoryModApi {
         /// Get a random mod from the mods list.
         pub async fn get_random_mod(&self) -> Result<DetailedMod, ApiError> {
             let mods = self.get_mods().await?;

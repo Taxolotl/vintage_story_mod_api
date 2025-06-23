@@ -1,9 +1,9 @@
-use vintage_story_mod_api::VintageStoryApi;
+use vintage_story_mod_api::VintageStoryModApi;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create the client with caching enabled
-    let api = VintageStoryApi::new(true);
+    let api = VintageStoryModApi::new(true);
 
     println!("Fetching mods...");
     let mods = api.get_mods().await?;

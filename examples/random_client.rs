@@ -1,9 +1,9 @@
-use vintage_story_mod_api::VintageStoryApi;
+use vintage_story_mod_api::VintageStoryModApi;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Enable "random" feature for this to work
-    let api = VintageStoryApi::new(false);
+    let api = VintageStoryModApi::new(false);
 
     // Get random mod
     let random_mod = api.get_random_mod().await?;

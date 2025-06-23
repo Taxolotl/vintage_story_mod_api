@@ -1,8 +1,8 @@
-use vintage_story_mod_api::VintageStoryApi;
+use vintage_story_mod_api::VintageStoryModApi;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let api = VintageStoryApi::new(false);
+    let api = VintageStoryModApi::new(false);
 
     // Get mods to pick one asset ID
     let mods = api.get_mods().await?;

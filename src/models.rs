@@ -170,7 +170,7 @@ impl From<DetailedMod> for SimpleMod {
             comments: detail.comments,
             name: detail.name,
             summary: Some(detail.text),
-            mod_id_strs: detail.releases.iter().map(|r| r.mod_id_str.clone()).collect(),
+            mod_id_strs: detail.releases.iter().filter_map(|r| r.mod_id_str.clone()).collect(),
             author: detail.author,
             url_alias: detail.url_alias,
             side: detail.side,
@@ -195,7 +195,7 @@ pub struct DetailedModRelease {
     pub downloads: u32,
     pub tags: Vec<String>,
     #[serde(rename(deserialize = "modidstr"))]
-    pub mod_id_str: String,
+    pub mod_id_str: Option<String>,
     #[serde(rename(deserialize = "modversion"))]
     pub mod_version: String,
     pub created: String,
