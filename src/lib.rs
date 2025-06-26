@@ -12,6 +12,6 @@ pub mod api;
 pub mod error;
 pub mod models;
 
-pub use api::VintageStoryModApi;
+pub use api::VintageStoryModDbApi;
 pub use error::ApiError;
 pub use models::*;

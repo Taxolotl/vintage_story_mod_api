@@ -1,9 +1,9 @@
-use vintage_story_mod_api::VintageStoryModApi;
+use vintagestory_mod_db_api::VintageStoryModDbApi;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create the client (without caching enabled)
-    let api = VintageStoryModApi::new(false);
+    let api = VintageStoryModDbApi::new(false);
 
     // Get all mods
     let mods = api.get_mods().await?;

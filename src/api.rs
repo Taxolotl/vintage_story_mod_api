@@ -6,7 +6,7 @@ use std::sync::Mutex;
 
 /// The core API client for interacting with the VintageStory mod database.
 #[derive(Debug)]
-pub struct VintageStoryModApi {
+pub struct VintageStoryModDbApi {
     client: Client,
     enable_cache: bool,
 
@@ -14,7 +14,7 @@ pub struct VintageStoryModApi {
     authors_cache: Mutex<Option<Vec<Author>>>,
 }
 
-impl VintageStoryModApi {
+impl VintageStoryModDbApi {
     const BASE_URL: &'static str = "https://mods.vintagestory.at/api";
 
     /// Create a new API client instance.
@@ -171,15 +171,50 @@ impl VintageStoryModApi {
         self.clear_authors_cache();
     }
 
-    pub async fn get_most_recent_file(&self, mod_id: u32) -> Result<String, ApiError> {
-        self.get_most_recent_file_from_alias(mod_id.to_string()).await
+    pub async fn get_most_recent_release(&self, mod_id: u32) -> Result<DetailedModRelease, ApiError> {
+        self.get_most_recent_release_from_alias(mod_id.to_string()).await
     }
 
-    pub async fn get_most_recent_file_from_alias(&self, alias: impl AsRef<str>) -> Result<String, ApiError> {
-        let mut mod_info = self.get_mod_from_alias(alias).await?;
-        mod_info.releases.sort_by_key(|release| release.created.clone());
+    pub async fn get_most_recent_release_from_alias(&self, alias: impl AsRef<str>) -> Result<DetailedModRelease, ApiError> {
+        self.get_most_recent_release_from_alias_with_version(alias, self.get_most_recent_stable_game_version().await?.name).await
+    }
 
-        Ok(mod_info.releases.first().unwrap().to_owned().main_file)
+    pub async fn get_most_recent_release_with_version(&self, mod_id: u32, version: impl AsRef<str>) -> Result<DetailedModRelease, ApiError> {
+        self.get_most_recent_release_from_alias_with_version(mod_id.to_string(), version).await
+    }
+
+    pub async fn get_most_recent_game_version(&self) -> Result<GameVersion, ApiError> {
+        let versions = self.get_game_versions().await?;
+
+        Ok(versions.last().unwrap().clone())
+    }
+
+    pub async fn get_most_recent_stable_game_version(&self) -> Result<GameVersion, ApiError> {
+        let versions = self.get_game_versions().await?;
+        let mut dif = 1;
+        while versions[versions.len() - dif].name.contains("pre") || versions[versions.len() - dif].name.contains("rc") || versions[versions.len() - dif].name.contains("dev") {
+            dif += 1;
+        }
+
+        Ok(versions[versions.len() - dif].clone())
+    }
+
+    pub async fn get_most_recent_release_from_alias_with_version(&self, alias: impl AsRef<str>, version: impl AsRef<str>) -> Result<DetailedModRelease, ApiError> {
+        let mod_info = self.get_mod_from_alias(alias).await?;
+        let mut iter = mod_info.releases.iter();
+        let mut current = iter.next().unwrap();
+        if current.tags.contains(&version.as_ref().to_string()) {
+            return Ok(current.clone());
+        }
+
+        while let Some(release) = iter.next() {
+            if release.tags.contains(&version.as_ref().to_string()) {
+                current = release;
+                break;
+            }
+        }
+
+        Ok(current.clone())
     }
 }
 
@@ -214,7 +249,7 @@ mod random_api {
     use super::*;
     use rand::rng;
 
-    impl VintageStoryModApi {
+    impl VintageStoryModDbApi {
         /// Get a random mod from the mods list.
         pub async fn get_random_mod(&self) -> Result<DetailedMod, ApiError> {
             let mods = self.get_mods().await?;

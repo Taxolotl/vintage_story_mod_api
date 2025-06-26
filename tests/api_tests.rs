@@ -1,8 +1,8 @@
-use vintage_story_mod_api::{VintageStoryModApi, ApiError};
+use vintagestory_mod_db_api::{VintageStoryModDbApi, ApiError};
 
 #[tokio::test]
 async fn test_get_mods() -> Result<(), ApiError> {
-    let api = VintageStoryModApi::new(false);
+    let api = VintageStoryModDbApi::new(false);
     let mods = api.get_mods().await?;
     assert!(!mods.is_empty(), "Mods list should not be empty");
     Ok(())
@@ -10,7 +10,7 @@ async fn test_get_mods() -> Result<(), ApiError> {
 
 #[tokio::test]
 async fn test_get_single_mod() -> Result<(), ApiError> {
-    let api = VintageStoryModApi::new(false);
+    let api = VintageStoryModDbApi::new(false);
     let mods = api.get_mods().await?;
     let first_mod = mods.first().expect("Expected at least one mod");
     let detailed = api.get_mod(first_mod.mod_id).await?;
@@ -20,7 +20,7 @@ async fn test_get_single_mod() -> Result<(), ApiError> {
 
 #[tokio::test]
 async fn test_get_tags() -> Result<(), ApiError> {
-    let api = VintageStoryModApi::new(false);
+    let api = VintageStoryModDbApi::new(false);
     let tags = api.get_tags().await?;
     assert!(!tags.is_empty(), "Tags list should not be empty");
     Ok(())
@@ -28,7 +28,7 @@ async fn test_get_tags() -> Result<(), ApiError> {
 
 #[tokio::test]
 async fn test_get_authors() -> Result<(), ApiError> {
-    let api = VintageStoryModApi::new(false);
+    let api = VintageStoryModDbApi::new(false);
     let authors = api.get_authors().await?;
     assert!(!authors.is_empty(), "Authors list should not be empty");
     Ok(())
@@ -36,7 +36,7 @@ async fn test_get_authors() -> Result<(), ApiError> {
 
 #[tokio::test]
 async fn test_get_game_versions() -> Result<(), ApiError> {
-    let api = VintageStoryModApi::new(false);
+    let api = VintageStoryModDbApi::new(false);
     let versions = api.get_game_versions().await?;
     assert!(!versions.is_empty(), "Game versions list should not be empty");
     Ok(())
@@ -44,7 +44,7 @@ async fn test_get_game_versions() -> Result<(), ApiError> {
 
 #[tokio::test]
 async fn test_get_comments() -> Result<(), ApiError> {
-    let api = VintageStoryModApi::new(false);
+    let api = VintageStoryModDbApi::new(false);
     let mods = api.get_mods().await?;
     let first_mod = mods.first().expect("Expected at least one mod");
     let comments = api.get_comments(first_mod.asset_id).await?;
@@ -56,7 +56,7 @@ async fn test_get_comments() -> Result<(), ApiError> {
 #[cfg(feature = "random")]
 #[tokio::test]
 async fn test_random_mod() -> Result<(), ApiError> {
-    let api = VintageStoryModApi::new(false);
+    let api = VintageStoryModDbApi::new(false);
     let detailed = api.get_random_mod().await?;
     assert!(!detailed.name.is_empty());
     Ok(())
