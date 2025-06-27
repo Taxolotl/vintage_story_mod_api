@@ -1,6 +1,8 @@
 //! All models returned by the VintageStory Web Mod API.
 
-use serde::Deserialize;
+use std::fmt;
+use serde::{de, Deserialize, Deserializer};
+use serde::de::Visitor;
 
 /// Top-level response for `/mods`
 #[derive(Debug, Deserialize, Clone, PartialEq, Eq)]
@@ -189,9 +191,10 @@ pub struct DetailedModRelease {
     pub release_id: u32,
     #[serde(rename(deserialize = "mainfile"))]
     pub main_file: String,
-    pub filename: String,
+    #[serde(deserialize_with = "string_or_null")]
+    pub filename: Option<String>,
     #[serde(rename(deserialize = "fileid"))]
-    pub file_id: u32,
+    pub file_id: Option<u32>,
     pub downloads: u32,
     pub tags: Vec<String>,
     #[serde(rename(deserialize = "modidstr"))]
@@ -201,6 +204,72 @@ pub struct DetailedModRelease {
     pub created: String,
     pub changelog: Option<String>,
 }
+
+impl DetailedModRelease {
+    pub fn get_filename(&self) -> String {
+        self.filename.clone().unwrap_or(self.mod_id_str.clone().map(|str| format!("{}.zip", str)).unwrap_or(self.main_file.clone()))
+    }
+}
+
+fn string_or_null<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    struct StringOrNullVisitor;
+
+    impl<'de> Visitor<'de> for StringOrNullVisitor {
+        type Value = Option<String>;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            formatter.write_str("a string, integer, or null")
+        }
+
+        fn visit_i64<E>(self, _v: i64) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            Ok(None)
+        }
+
+        fn visit_u64<E>(self, _v: u64) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            Ok(None)
+        }
+
+        fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            Ok(Some(v.to_string()))
+        }
+
+        fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            Ok(Some(v))
+        }
+
+        fn visit_none<E>(self) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            Ok(None)
+        }
+
+        fn visit_unit<E>(self) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            Ok(None)
+        }
+    }
+
+    deserializer.deserialize_any(StringOrNullVisitor)
+}
+
 
 /// Screenshot entry for a mod
 #[derive(Debug, Deserialize, Clone, PartialEq, Eq)]

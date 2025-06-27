@@ -1,5 +1,6 @@
 use vintagestory_mod_db_api::VintageStoryModDbApi;
 
+#[cfg(feature = "random")]
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Enable "random" feature for this to work
@@ -22,4 +23,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Random game version: {}", version.name);
 
     Ok(())
+}
+
+
+#[cfg(not(feature = "random"))]
+fn main() {
+    panic!("Please run with the random feature enabled!")
 }
