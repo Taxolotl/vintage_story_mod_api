@@ -188,6 +188,27 @@ impl VintageStoryModDbApi {
 
         Ok(versions.last().unwrap().clone())
     }
+    
+    pub async fn get_mod_release_with_version(&self, mod_id: u32, version: impl AsRef<str>) -> Result<DetailedModRelease, ApiError> {
+        self.get_mod_release_with_version_from_alias(mod_id.to_string(), version).await
+    }
+    
+    pub async fn get_mod_release_with_version_from_alias(&self, alias: impl AsRef<str>, version: impl AsRef<str>) -> Result<DetailedModRelease, ApiError> {
+        let mod_info = self.get_mod_from_alias(&alias).await?;
+        let mut releases = mod_info.releases;
+        releases.retain(|release_info| release_info.mod_version == version.as_ref());
+        if releases.is_empty() {
+            return Err(ApiError::Unexpected(format!(
+                "No version {} found for {}",
+                version.as_ref(),
+                alias.as_ref()
+            )))
+        }
+        if releases.len() > 1 {
+            println!("Found multiple releases {} for {}", releases.len(), alias.as_ref());
+        }
+        Ok(releases.first().unwrap().clone())
+    }
 
     pub async fn get_most_recent_stable_game_version(&self) -> Result<GameVersion, ApiError> {
         let versions = self.get_game_versions().await?;
